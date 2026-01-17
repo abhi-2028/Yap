@@ -61,3 +61,7 @@ export const signup =  async (req, res) => {
     return res.status(500).json({ message: 'Internal server error' })
   }
 }
+
+export const login = (req, res) => {
+  res.send('login endpoint')
+}
