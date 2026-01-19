@@ -1,0 +1,117 @@
+import cloudinary from "../lib/cloudinary.js";
+import Message from "../models/Message.model.js";
+import User from "../models/User.model.js";
+
+export const getAllContacts = async (req, res) => {
+  try {
+    const loggedInUserId = req.user._id;
+
+    const filteredUsers = await User.find({
+      _id: { $ne: loggedInUserId },
+    }).select("-password");
+
+    res.status(200).json(filteredUsers);
+  } catch (err) {
+    console.log(`Error in getAllContacts: ${err.message}`);
+    res.status(500).json({ message: "Internal server error" });
+  }
+};
+
+export const getMessagesById = async (req, res) => {
+  try {
+    const myId = req.user._id;
+    const { id: userToChat } = req.params;
+
+    const messages = await Message.find({
+      $or: [
+        { senderId: myId, receiverId: userToChat },
+        { senderId: userToChat, receiverId: myId },
+      ],
+    });
+
+    res.status(200).json(messages);
+  } catch (error) {
+    console.log(`Error in getMessagesById: ${error.message}`);
+    res.status(500).json({ message: "Internal server error" });
+  }
+};
+
+export const sendMessage = async (req, res) => {
+  try {
+    const { text, image } = req.body;
+    const { id: receiverId } = req.params;
+    const senderId = req.user._id;
+    const normalizedText = typeof text === "string" ? text.trim() : "";
+    if (!normalizedText && !image) {
+      return res
+        .status(400)
+        .json({ message: "Either text or image is required." });
+    }
+
+    if (senderId.equals(receiverId)) {
+      return res
+        .status(400)
+        .json({ message: "You cannot send messages to yourself." });
+    }
+
+    const receiverExists = await User.findById(receiverId);
+    if (!receiverExists) {
+      return res.status(404).json({ message: "Receiver not found." });
+    }
+
+    let imageUrl;
+
+    if (image) {
+      const uploadResult = await cloudinary.uploader.upload(image);
+      imageUrl = uploadResult.secure_url;
+    }
+
+    const newMessage = new Message({
+      senderId,
+      receiverId,
+      text : normalizedText,
+      image: imageUrl,
+    });
+
+    await newMessage.save();
+
+    // send message in real-time if user is online (Pending implementation)
+
+    res.status(201).json(newMessage);
+  } catch (error) {
+    console.log(`Error in sendMessage: ${error.message}`);
+    res.status(500).json({ message: "Internal server error" });
+  }
+};
+
+export const getChatList = async (req, res) => {
+  try {
+    const loggedInUserId = req.user._id;
+
+    //finding all messages where the logged in user is either sender or receiver
+
+    const messages = await Message.find({
+      $or: [{ senderId: loggedInUserId }, { receiverId: loggedInUserId }],
+    });
+
+    //extracting unique chat ids
+    const chatPartnerIds = [
+      ...new Set(
+        messages.map((msg) =>
+          msg.senderId.equals(loggedInUserId)
+            ? msg.receiverId.toString()
+            : msg.senderId.toString(),
+        ),
+      ),
+    ];
+
+    const chatPartners = await User.find({
+      _id: { $in: chatPartnerIds },
+    }).select("-password");
+
+    res.status(200).json(chatPartners);
+  } catch (error) {
+    console.log("Error in getChatPartner: ", error.message);
+    res.status(500).json({ error: "Internal server error." });
+  }
+};
