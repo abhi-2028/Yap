@@ -1,20 +1,37 @@
 import React from 'react'
-import { useAuthStore } from '../store/useAuthStore.js'
+// import { useAuthStore } from '../store/useAuthStore.js'
+import BorderAnimatedContainer from '../components/BorderAnimatedContainer.jsx';
+import { useChatStore } from '../store/useChatStore.js';
+import ProfileHeader from '../components/ProfileHeader.jsx';
+import ActiveTabSwitch from '../components/ActiveTabSwitch.jsx';
+import ContactList from '../components/ContactList.jsx';
+import ChatList from '../components/ChatList.jsx';
+import ChatContainer from '../components/ChatContainer.jsx';
+import NoConversation from '../components/NoConversation.jsx';
 
 const ChatPage = () => {
 
-  const { logout, isCheckingAuth } = useAuthStore();
-
+  // const { logout, isCheckingAuth } = useAuthStore();
+  const { activeTab, selectedChat } = useChatStore();
 
   return (
-    <div  className='z-10'>
-      <button 
-        onClick={logout} 
-        disabled={isCheckingAuth}
-        className='px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed z-10'
-      >
-        {isCheckingAuth ? 'Logging out...' : 'Logout'}
-      </button>
+    <div className='relative w-full max-w-6xl h-[800px] '>
+      <BorderAnimatedContainer>
+        {/* Left Side */}
+        <div className='w-80 bg-slate-800/50 backdrop-blur-sm flex flex-col'>
+          <ProfileHeader />
+          <ActiveTabSwitch />
+
+          <div className='flex-1 overflow-y-auto p-4 space-y-4'>
+            {activeTab === 'chats' ? <ChatList /> : <ContactList />}
+          </div>
+        </div>
+
+        {/* Right Side */}
+        <div className='flex-1 flex flex-col bg-slate-900/50 backdrop-blur-sm'>
+          {selectedChat ? <ChatContainer/> : <NoConversation/>}
+        </div>
+      </BorderAnimatedContainer>
     </div>
   )
 }
