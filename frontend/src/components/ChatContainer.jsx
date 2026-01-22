@@ -10,10 +10,10 @@ const ChatContainer = () => {
   const { selectedChat, getMessageByUserId, messages, isMessagesLoading } = useChatStore()
   const { authUser } = useAuthStore()
 
-  console.log(messages.length)
-
   useEffect(() => {
-    getMessageByUserId(selectedChat._id)
+    if (selectedChat?._id) {
+      getMessageByUserId(selectedChat._id)
+    }
   },[selectedChat,getMessageByUserId])
 
   return (
@@ -33,7 +33,7 @@ const ChatContainer = () => {
                 )}
                 {msg.text && <p className='mt-1'>{msg.text}</p>}
                 <p className='text-xs mt-1 opacity-75 flex items-center gap-1'>
-                  {new Date(msg.createdAt).toISOString().slice(11,16)}
+                  {new Date(msg.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit"})}
                 </p>
                 </div>
               </div>

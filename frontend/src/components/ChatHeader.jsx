@@ -12,6 +12,10 @@ const ChatHeader = () => {
         }
 
         window.addEventListener("keydown", handleEscKey)
+
+        return () => {
+            window.removeEventListener("keydown", handleEscKey)
+        }
     }, [selectedChat])
 
     return (
