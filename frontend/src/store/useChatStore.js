@@ -32,6 +32,7 @@ export const useChatStore = create((set,get) => ({
             set({isUserLoading: false});
         }
     },
+
     getMyChats: async () => {
         set({isUserLoading: true});
         try {
@@ -43,6 +44,7 @@ export const useChatStore = create((set,get) => ({
             set({isUserLoading: false});
         }
     },
+
     getMessageByUserId: async (userId) => {
         set({isMessagesLoading: true});
         try{
@@ -80,5 +82,33 @@ export const useChatStore = create((set,get) => ({
             set({messages: get().messages.filter(m => m._id !== tempId)})
             toast.error(error.response?.data?.message || "Something went wrong!");
         }
+    },
+
+    subscribeToMessages: () => {
+        const { selectedChat, isSoundEnabled } = get()
+        if(!selectedChat) return
+
+        const socket = useAuthStore.getState().socket
+
+        socket.on("newMessage", (newMessage) => {
+            // important
+            const isMessageSentFromSelectedUser = newMessage.senderId === selectedChat._id
+            if(!isMessageSentFromSelectedUser) return
+
+            const currentMessages = get().messages
+            set({messages:[...currentMessages, newMessage]})
+
+            if(isSoundEnabled){
+                const notificationSound = new Audio('/sounds/notification.mp3')
+
+                notificationSound.currentTime = 0
+                notificationSound.play().catch((e) => console.log("Audio play failed:", e))
+            }
+        })
+    },
+
+    unsubscribeFromMessages: () => {
+        const socket = useAuthStore.getState().socket
+        socket.off("newMessage")
     }
 }));
