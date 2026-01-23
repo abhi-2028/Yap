@@ -17,11 +17,16 @@ const io = new Server(server, {
 // applying auth middleware for socket connections
 io.use(socketAuthMiddleware);
 
+// use it to check if user is online or not
+export const getReceiverSocketId = (userId) => {
+  return userSocketMap[userId]
+}
+
 // to store online user
 const userSocketMap = {};
 
 io.on("connection", (socket) => {
-  console.log("A User connected", socket.user.fullName);
+  // console.log("A User connected", socket.user.fullName);
 
   const userId = socket.userId;
   userSocketMap[userId] = socket.id;
@@ -30,7 +35,7 @@ io.on("connection", (socket) => {
   io.emit("getOnlineUsers", Object.keys(userSocketMap));
 
   socket.on("disconnect", () => {
-    console.log("A user disconnected", socket.user.fullName);
+    // console.log("A user disconnected", socket.user.fullName);
     delete userSocketMap[userId];
     io.emit("getOnlineUsers", Object.keys(userSocketMap));
   });
