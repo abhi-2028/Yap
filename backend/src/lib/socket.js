@@ -35,10 +35,10 @@ io.on("connection", (socket) => {
   io.emit("getOnlineUsers", Object.keys(userSocketMap));
 
   // Voice call events
-  socket.on("call-offer", ({ offer, to, from }) => {
+  socket.on("call-offer", async ({ offer, to }) => {
     const receiverSocketId = userSocketMap[to];
     if (receiverSocketId) {
-      io.to(receiverSocketId).emit("call-offer", { offer, from });
+      io.to(receiverSocketId).emit("call-offer", { offer, from: socket.userId });
     }
   });
 
