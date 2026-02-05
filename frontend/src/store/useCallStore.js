@@ -13,12 +13,10 @@ export const useCallStore = create((set, get) => ({
   peerConnection: null,
 
   // WebRTC configuration
-  iceServers: {
-    iceServers: [
-      { urls: "stun:stun.l.google.com:19302" },
-      { urls: "stun:stun1.l.google.com:19302" },
-    ],
-  },
+  iceServers: [
+    { urls: "stun:stun.l.google.com:19302" },
+    { urls: "stun:stun1.l.google.com:19302" },
+  ],
 
   // Initialize call
   initiateCall: async (receiverData) => {
