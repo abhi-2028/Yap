@@ -7,14 +7,24 @@ import { useAuthStore } from './store/useAuthStore.js'
 import { useEffect } from 'react'
 import PageLoader from './components/PageLoader.jsx'
 import { Toaster } from 'react-hot-toast'
+import VoiceCallModal from './components/VoiceCallModal.jsx'
+import { useCallStore } from './store/useCallStore.js'
 
 const App = () => {
 
-  const { checkAuth, isCheckingAuth, authUser } = useAuthStore();
+  const { checkAuth, isCheckingAuth, authUser, socket } = useAuthStore();
+  const { subscribeToCallEvents, unsubscribeFromCallEvents } = useCallStore();
 
   useEffect(() => {
     checkAuth();
   }, [checkAuth]);
+
+  useEffect(() => {
+    if (authUser && socket) {
+      subscribeToCallEvents();
+      return () => unsubscribeFromCallEvents();
+    }
+  }, [authUser, socket, subscribeToCallEvents, unsubscribeFromCallEvents]);
 
   // console.log({ authUser })
   if(isCheckingAuth) return <PageLoader />
@@ -30,6 +40,8 @@ const App = () => {
       <div className="absolute bottom-20 right-20 w-80 h-80 bg-cyan-500 opacity-20 blur-[140px] rounded-full" />
 
       <Toaster/>
+
+      <VoiceCallModal />
 
       <Routes>
         <Route path="/" element={authUser? <ChatPage /> : <Navigate to={"/login"}/>} />
