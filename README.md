@@ -4,14 +4,19 @@ Yap is a full-stack real-time chat application with user authentication, one-to-
 
 ## Features
 
-- Secure signup, login, logout, and session checks
-- Real-time one-to-one messaging with Socket.IO
-- Contact list and chat history views
-- Image message uploads through Cloudinary
-- Profile picture updates
-- Online user tracking
-- Welcome email delivery on signup through Resend
-- Basic request protection through Arcjet middleware
+- Secure signup, login, logout, and session checks (Bcrypt 10 rounds, HttpOnly JWT cookies)
+- Real-time one-to-one messaging across horizontally scaled instances via Socket.IO + Redis Adapter
+- Distributed online/offline presence tracking with multi-tab session management and TTL heartbeats
+- Message delivery receipts, read receipts, and idempotency key deduplication
+- Offline message synchronization endpoint (`/api/messages/sync/unread`)
+- Fast database indexing (bidirectional compound B-Tree indexes on MongoDB messages)
+- In-database aggregation pipeline for recent chat lists
+- Keyset cursor-based pagination for chat history
+- Asynchronous background email processing with BullMQ + Redis (exponential backoffs & retries)
+- Production-grade structured JSON logging (Pino) and request correlation IDs (`x-request-id`)
+- Containerized horizontal scaling with Docker, Docker Compose, and Nginx load balancer
+- Automated unit test suite via Node.js native test runner
+- Performance and load testing scripts (k6 & WebSocket benchmarks)
 
 ## Tech Stack
 
@@ -84,7 +89,25 @@ npm install --prefix frontend
 
 2. Add the backend environment variables.
 
-## Running Locally
+## Automated Tests
+
+Run backend unit tests (using Node.js native test runner):
+
+```bash
+npm test --prefix backend
+```
+
+## Running with Docker (Horizontally Scaled Cluster)
+
+To spin up the complete distributed stack (Nginx load balancer + 2 backend instances + Redis + frontend):
+
+```bash
+docker compose up --build
+```
+
+Access the application through the load balancer at `http://localhost`.
+
+## Running Locally Without Docker
 
 Run the backend and frontend in separate terminals.
 

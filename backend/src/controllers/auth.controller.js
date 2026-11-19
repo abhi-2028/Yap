@@ -1,4 +1,5 @@
 import { sendWelcomeEmail } from '../emails/emailHandlers.js';
+import { queueWelcomeEmail } from '../queues/email.queue.js';
 import { ENV } from '../lib/ENV.js';
 import { generateToken } from '../lib/utils.js';
 import User from '../models/User.model.js';
@@ -27,7 +28,8 @@ export const signup = async (req, res) => {
     const user = await User.findOne({ email })
     if (user) return res.status(400).json({ message: 'User already exists' })
 
-    const salt = await bcrypt.genSalt(15)
+    // Use standard work factor (10 rounds): balances brute-force defense with non-blocking server throughput (~60ms vs ~2000ms)
+    const salt = await bcrypt.genSalt(10)
     const hashedPassword = await bcrypt.hash(password, salt)
 
     const newUser = new User({
@@ -47,13 +49,8 @@ export const signup = async (req, res) => {
         profilePic: savedUser.profilePic
       })
 
-      // send welcome email
-
-      try {
-        await sendWelcomeEmail(savedUser.email, savedUser.fullName, ENV.CLIENT_URL);
-      } catch (error) {
-        console.error('Error sending welcome email:', error);
-      }
+      // Asynchronous email dispatch via queue (non-blocking)
+      queueWelcomeEmail(savedUser.email, savedUser.fullName, ENV.CLIENT_URL);
 
     } else {
       return res.status(400).json({ message: 'Invalid user data' })
@@ -80,7 +77,7 @@ export const login = async (req, res) => {
 
     generateToken(user._id, res)
 
-    res.status(201).json({
+    res.status(200).json({
       _id: user._id,
       fullName: user.fullName,
       email: user.email,

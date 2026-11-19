@@ -45,20 +45,33 @@ export const useChatStore = create((set,get) => ({
         }
     },
 
-    getMessageByUserId: async (userId) => {
-        set({isMessagesLoading: true});
+    getMessageByUserId: async (userId, cursor = null) => {
+        if (!cursor) {
+            set({isMessagesLoading: true});
+        }
         try{
-            const res = await axiosInstance.get(`/messages/${userId}`)
-            set({ messages: res.data })
+            const url = cursor 
+                ? `/messages/${userId}?cursor=${cursor}&limit=50` 
+                : `/messages/${userId}?limit=50`;
+            const res = await axiosInstance.get(url);
+
+            if (cursor) {
+                // Prepend older messages for pagination
+                set({ messages: [...res.data, ...get().messages] });
+            } else {
+                set({ messages: res.data });
+            }
         }catch(error){
             toast.error(error.response?.data?.message || "Something went wrong");
         }finally{
-            set({isMessagesLoading: false})
+            if (!cursor) {
+                set({isMessagesLoading: false});
+            }
         }
     },
 
     sendMessage: async(messageData) => {
-        const {selectedChat, messages} = get()
+        const {selectedChat, messages, chats} = get()
         const {authUser} = useAuthStore.getState()
         const tempId = `temp-${Date.now()}`
 
@@ -77,6 +90,17 @@ export const useChatStore = create((set,get) => ({
         try{
             const res = await axiosInstance.post(`/messages/send/${selectedChat._id}`, messageData)
             set({messages: get().messages.filter(m => m._id !== tempId).concat(res.data)})
+
+            // Move this chat partner to the top of recent chats
+            const partnerIndex = chats.findIndex(c => c._id === selectedChat._id);
+            if (partnerIndex !== -1) {
+                const updatedChat = { 
+                    ...chats[partnerIndex], 
+                    lastMessageText: res.data.text, 
+                    lastMessageAt: res.data.createdAt 
+                };
+                set({ chats: [updatedChat, ...chats.filter(c => c._id !== selectedChat._id)] });
+            }
         } catch (error) {
             // remove optimistic message on failure
             set({messages: get().messages.filter(m => m._id !== tempId)})
@@ -85,22 +109,47 @@ export const useChatStore = create((set,get) => ({
     },
 
     subscribeToMessages: () => {
-        const { selectedChat, isSoundEnabled } = get()
-        if(!selectedChat) return
-
         const socket = useAuthStore.getState().socket
+        if(!socket) return
+
+        // Prevent duplicate listeners
+        socket.off("newMessage");
 
         socket.on("newMessage", (newMessage) => {
-            // important
-            const isMessageSentFromSelectedUser = newMessage.senderId === selectedChat._id
-            if(!isMessageSentFromSelectedUser) return
+            const { selectedChat, isSoundEnabled, chats } = get()
+            const authUserId = useAuthStore.getState().authUser?._id
 
-            const currentMessages = get().messages
-            set({messages:[...currentMessages, newMessage]})
+            // Check if message belongs to active chat
+            const isForSelectedChat = selectedChat && (
+                newMessage.senderId === selectedChat._id || 
+                newMessage.receiverId === selectedChat._id
+            );
 
+            if(isForSelectedChat) {
+                set({ messages: [...get().messages, newMessage] });
+            }
+
+            // Always update chats list order so active conversations appear at top
+            const partnerId = newMessage.senderId === authUserId 
+                ? newMessage.receiverId 
+                : newMessage.senderId;
+
+            const existingIndex = chats.findIndex(c => c._id === partnerId);
+            if (existingIndex !== -1) {
+                const updatedChat = { 
+                    ...chats[existingIndex], 
+                    lastMessageText: newMessage.text, 
+                    lastMessageAt: newMessage.createdAt 
+                };
+                set({ chats: [updatedChat, ...chats.filter(c => c._id !== partnerId)] });
+            } else {
+                // If partner is not in chat list, fetch fresh list
+                get().getMyChats();
+            }
+
+            // Play notification sound
             if(isSoundEnabled){
                 const notificationSound = new Audio('/sounds/notification.mp3')
-
                 notificationSound.currentTime = 0
                 notificationSound.play().catch((e) => console.log("Audio play failed:", e))
             }

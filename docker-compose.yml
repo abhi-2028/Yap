@@ -1,0 +1,85 @@
+services:
+  redis:
+    image: redis:7-alpine
+    container_name: yap-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - yap-network
+
+  backend-1:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: yap-backend-1
+    restart: unless-stopped
+    env_file:
+      - ./backend/.env
+    environment:
+      - PORT=5000
+      - NODE_ENV=production
+      - REDIS_URL=redis://redis:6379
+      - ENABLE_REDIS=true
+    depends_on:
+      redis:
+        condition: service_healthy
+    networks:
+      - yap-network
+
+  backend-2:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: yap-backend-2
+    restart: unless-stopped
+    env_file:
+      - ./backend/.env
+    environment:
+      - PORT=5000
+      - NODE_ENV=production
+      - REDIS_URL=redis://redis:6379
+      - ENABLE_REDIS=true
+    depends_on:
+      redis:
+        condition: service_healthy
+    networks:
+      - yap-network
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: yap-frontend
+    restart: unless-stopped
+    networks:
+      - yap-network
+
+  nginx:
+    image: nginx:alpine
+    container_name: yap-load-balancer
+    restart: unless-stopped
+    ports:
+      - "80:80"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      - backend-1
+      - backend-2
+      - frontend
+    networks:
+      - yap-network
+
+volumes:
+  redis_data:
+
+networks:
+  yap-network:
+    driver: bridge
