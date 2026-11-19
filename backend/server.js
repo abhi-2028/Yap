@@ -5,15 +5,15 @@ import cookieParser from "cookie-parser";
 import cors from "cors";
 import mongoose from "mongoose";
 
-import { ENV } from "./lib/ENV.js";
-import { logger } from "./lib/logger.js";
-import authRoutes from "./routes/auth.route.js";
-import messageRoutes from "./routes/message.route.js";
-import { connectDB } from "./lib/db.js";
-import { app, server } from "./lib/socket.js";
-import { getRedisStatus } from "./lib/redis.js";
-import { initEmailQueue } from "./queues/email.queue.js";
-import { startEmailWorker } from "./workers/email.worker.js";
+import { ENV } from "./src/lib/ENV.js";
+import { logger } from "./src/lib/logger.js";
+import authRoutes from "./src/routes/auth.route.js";
+import messageRoutes from "./src/routes/message.route.js";
+import { connectDB } from "./src/lib/db.js";
+import { app, server } from "./src/lib/socket.js";
+import { getRedisStatus } from "./src/lib/redis.js";
+import { initEmailQueue } from "./src/queues/email.queue.js";
+import { startEmailWorker } from "./src/workers/email.worker.js";
 
 const __dirname = path.resolve();
 const PORT = ENV.PORT || 5000;
