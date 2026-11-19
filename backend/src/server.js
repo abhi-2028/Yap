@@ -5,17 +5,18 @@ import cookieParser from "cookie-parser";
 import cors from "cors";
 import mongoose from "mongoose";
 
-import { ENV } from "./src/lib/ENV.js";
-import { logger } from "./src/lib/logger.js";
-import authRoutes from "./src/routes/auth.route.js";
-import messageRoutes from "./src/routes/message.route.js";
-import { connectDB } from "./src/lib/db.js";
-import { app, server } from "./src/lib/socket.js";
-import { getRedisStatus } from "./src/lib/redis.js";
-import { initEmailQueue } from "./src/queues/email.queue.js";
-import { startEmailWorker } from "./src/workers/email.worker.js";
+import { fileURLToPath } from "url";
+import { ENV } from "./lib/ENV.js";
+import { logger } from "./lib/logger.js";
+import authRoutes from "./routes/auth.route.js";
+import messageRoutes from "./routes/message.route.js";
+import { connectDB } from "./lib/db.js";
+import { app, server } from "./lib/socket.js";
+import { getRedisStatus } from "./lib/redis.js";
+import { initEmailQueue } from "./queues/email.queue.js";
+import { startEmailWorker } from "./workers/email.worker.js";
 
-const __dirname = path.resolve();
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const PORT = ENV.PORT || 5000;
 
 // Request correlation ID & timing middleware
@@ -73,10 +74,11 @@ app.use("/api/messages", messageRoutes);
 
 // Static frontend serving in production
 if (ENV.NODE_ENV === "production") {
-  app.use(express.static(path.join(__dirname, "../frontend/dist")));
+  const frontendDist = path.resolve(__dirname, "../../frontend/dist");
+  app.use(express.static(frontendDist));
 
   app.get("*", (_, res) => {
-    res.sendFile(path.join(__dirname, "../frontend/dist", "index.html"));
+    res.sendFile(path.join(frontendDist, "index.html"));
   });
 }
 
